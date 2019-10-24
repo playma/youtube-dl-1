@@ -7,12 +7,13 @@ import re
 from .common import InfoExtractor
 from ..compat import (
     compat_parse_qs,
+    compat_str,
     compat_urllib_request,
     compat_urlparse,
 )
 from ..utils import (
-    ExtractorError,
     sanitized_Request,
+    try_get,
     urlencode_postdata,
 )
 
@@ -26,7 +27,7 @@ class FC2IE(InfoExtractor):
         'md5': 'a6ebe8ebe0396518689d963774a54eb7',
         'info_dict': {
             'id': '20121103kUan1KHs',
-            'ext': 'flv',
+            'ext': 'mp4',
             'title': 'Boxing again with Puff',
         },
     }, {
@@ -86,7 +87,6 @@ class FC2IE(InfoExtractor):
         title = 'FC2 video %s' % video_id
         thumbnail = None
         if webpage is not None:
-            title = self._og_search_title(webpage)
             thumbnail = self._og_search_thumbnail(webpage)
         refer = url.replace('/content/', '/a/content/') if '/a/content/' not in url else url
 
@@ -99,25 +99,24 @@ class FC2IE(InfoExtractor):
         info_webpage = self._download_webpage(
             info_url, video_id, note='Downloading info page')
         info = compat_urlparse.parse_qs(info_webpage)
-
-        if 'err_code' in info:
-            # most of the time we can still download wideo even if err_code is 403 or 602
-            self.report_warning(
-                'Error code was: %s... but still trying' % info['err_code'][0])
-
-        if 'filepath' not in info:
-            raise ExtractorError('Cannot download file. Are you logged in?')
-
-        video_url = info['filepath'][0] + '?mid=' + info['mid'][0]
         title_info = info.get('title')
         if title_info:
             title = title_info[0]
+
+        meta = self._download_json(
+            'https://video.fc2.com/api/v3/videoplaylist/%s' % video_id,
+            video_id,
+            query={
+                'sh': 1,
+                'fs': 0,
+            })
+        video_url = 'https://video.fc2.com' + try_get(meta, lambda x: x['playlist']['nq'], compat_str)
 
         return {
             'id': video_id,
             'title': title,
             'url': video_url,
-            'ext': 'flv',
+            'ext': 'mp4',
             'thumbnail': thumbnail,
         }
 
