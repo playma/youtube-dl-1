@@ -6,7 +6,6 @@ import re
 from .theplatform import ThePlatformBaseIE
 from ..compat import (
     compat_parse_qs,
-    compat_str,
     compat_urllib_parse_urlparse,
 )
 from ..utils import (
@@ -24,7 +23,7 @@ class MediasetIE(ThePlatformBaseIE):
                         https?://
                             (?:(?:www|static3)\.)?mediasetplay\.mediaset\.it/
                             (?:
-                                (?:video|on-demand)/(?:[^/]+/)+[^/]+_|
+                                (?:video|on-demand|movie)/(?:[^/]+/)+[^/]+_|
                                 player/index\.html\?.*?\bprogramGuid=
                             )
                     )(?P<id>[0-9A-Z]{16,})
@@ -89,6 +88,9 @@ class MediasetIE(ThePlatformBaseIE):
     }, {
         'url': 'https://www.mediasetplay.mediaset.it/video/grandefratellovip/benedetta-una-doccia-gelata_F309344401044C135',
         'only_matching': True,
+    }, {
+        'url': 'https://www.mediasetplay.mediaset.it/movie/herculeslaleggendahainizio/hercules-la-leggenda-ha-inizio_F305927501000102',
+        'only_matching': True,
     }]
 
     @staticmethod
@@ -114,7 +116,7 @@ class MediasetIE(ThePlatformBaseIE):
                 continue
             urlh = ie._request_webpage(
                 embed_url, video_id, note='Following embed URL redirect')
-            embed_url = compat_str(urlh.geturl())
+            embed_url = urlh.geturl()
             program_guid = _program_guid(_qs(embed_url))
             if program_guid:
                 entries.append(embed_url)
@@ -123,7 +125,7 @@ class MediasetIE(ThePlatformBaseIE):
     def _parse_smil_formats(self, smil, smil_url, video_id, namespace=None, f4m_params=None, transform_rtmp_url=None):
         for video in smil.findall(self._xpath_ns('.//video', namespace)):
             video.attrib['src'] = re.sub(r'(https?://vod05)t(-mediaset-it\.akamaized\.net/.+?.mpd)\?.+', r'\1\2', video.attrib['src'])
-        return super()._parse_smil_formats(smil, smil_url, video_id, namespace, f4m_params, transform_rtmp_url)
+        return super(MediasetIE, self)._parse_smil_formats(smil, smil_url, video_id, namespace, f4m_params, transform_rtmp_url)
 
     def _real_extract(self, url):
         guid = self._match_id(url)
